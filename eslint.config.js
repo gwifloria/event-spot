@@ -40,6 +40,8 @@ export default [
         setInterval: "readonly",
         clearInterval: "readonly",
         fetch: "readonly",
+        URL: "readonly",
+        URLSearchParams: "readonly",
         require: "readonly",
         module: "readonly",
         exports: "readonly",
