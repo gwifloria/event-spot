@@ -1,15 +1,12 @@
 import { useColorScheme } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { TamaguiProvider, Theme } from "tamagui";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-
-import config from "../tamagui.config";
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
+      staleTime: 1000 * 60 * 5,
       retry: 2,
     },
   },
@@ -20,16 +17,12 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TamaguiProvider config={config}>
-        <Theme name={colorScheme === "dark" ? "dark" : "light"}>
-          <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-            }}
-          />
-        </Theme>
-      </TamaguiProvider>
+      <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+        }}
+      />
     </QueryClientProvider>
   );
 }
