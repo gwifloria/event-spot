@@ -12,9 +12,11 @@ import {
   ActivityIndicator,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  Share,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Feather } from "@expo/vector-icons";
 import { useEventDetail } from "../../src/hooks";
 import { ErrorView } from "../../src/components";
 import { colors, getColors } from "../../src/constants/colors";
@@ -23,6 +25,7 @@ import {
   formatEventTime,
   formatPriceRange,
 } from "../../src/utils/formatDate";
+import { useAppStore } from "../../src/stores/appStore";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -39,6 +42,9 @@ export default function EventDetailScreen() {
     refetch,
   } = useEventDetail(id || "");
 
+  const { favorites, toggleFavorite } = useAppStore();
+  const isFavorite = id ? favorites.includes(id) : false;
+
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -49,6 +55,25 @@ export default function EventDetailScreen() {
   const handleBuyTickets = () => {
     if (event?.url) {
       Linking.openURL(event.url);
+    }
+  };
+
+  const handleToggleFavorite = () => {
+    if (id) {
+      toggleFavorite(id);
+    }
+  };
+
+  const handleShare = async () => {
+    if (!event) return;
+    try {
+      await Share.share({
+        title: event.name,
+        message: `${event.name}\n${event.url}`,
+        url: event.url, // iOS only
+      });
+    } catch {
+      // User cancelled or share failed
     }
   };
 
@@ -94,7 +119,42 @@ export default function EventDetailScreen() {
       style={[styles.container, { backgroundColor: c.background }]}
       edges={["top"]}
     >
-      <BackButton colors={c} floating />
+      <View style={styles.floatingHeader}>
+        <BackButton colors={c} floating />
+        <View style={styles.headerActions}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.actionButton,
+              pressed && styles.pressed,
+            ]}
+            onPress={handleToggleFavorite}
+          >
+            <View
+              style={[
+                styles.actionButtonCircle,
+                isFavorite && styles.actionButtonFavorited,
+              ]}
+            >
+              <Feather
+                name="heart"
+                size={20}
+                color={isFavorite ? "#fff" : "#fff"}
+              />
+            </View>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [
+              styles.actionButton,
+              pressed && styles.pressed,
+            ]}
+            onPress={handleShare}
+          >
+            <View style={styles.actionButtonCircle}>
+              <Feather name="share" size={20} color="#fff" />
+            </View>
+          </Pressable>
+        </View>
+      </View>
 
       <ScrollView
         style={styles.scrollView}
@@ -144,95 +204,117 @@ export default function EventDetailScreen() {
 
         {/* Content */}
         <View style={styles.content}>
-          {event.genre && (
-            <Text style={styles.genre}>
-              {event.segment} · {event.genre}
-            </Text>
+          {(event.segment || event.genre) && (
+            <View style={styles.categoryBadge}>
+              <Text style={styles.categoryText}>
+                {[event.segment, event.genre].filter(Boolean).join(" · ")}
+              </Text>
+            </View>
           )}
 
           <Text style={[styles.title, { color: c.text }]}>{event.name}</Text>
 
-          {/* Date & Time */}
-          <View style={styles.infoRow}>
+          {/* Info Cards */}
+          <View style={styles.infoCards}>
+            {/* Date & Time */}
             <View
               style={[
-                styles.iconBox,
+                styles.infoCard,
                 { backgroundColor: c.backgroundSecondary },
               ]}
             >
-              <Text style={styles.icon}>📅</Text>
-            </View>
-            <View style={styles.infoText}>
-              <Text style={[styles.infoTitle, { color: c.text }]}>
-                {formatEventDate(event.date)}
-              </Text>
-              {event.time && (
-                <Text style={[styles.infoSubtitle, { color: c.textSecondary }]}>
-                  {formatEventTime(event.time)}
-                </Text>
-              )}
-            </View>
-          </View>
-
-          {/* Venue */}
-          {event.venue && (
-            <View style={styles.infoRow}>
-              <View
-                style={[
-                  styles.iconBox,
-                  { backgroundColor: c.backgroundSecondary },
-                ]}
-              >
-                <Text style={styles.icon}>📍</Text>
+              <View style={[styles.iconCircle, { backgroundColor: "#eef2ff" }]}>
+                <Feather name="calendar" size={20} color="#6366f1" />
               </View>
               <View style={styles.infoText}>
-                <Text style={[styles.infoTitle, { color: c.text }]}>
-                  {event.venue.name}
+                <Text style={[styles.infoLabel, { color: c.textTertiary }]}>
+                  Date & Time
                 </Text>
-                {(event.venue.city || event.venue.address) && (
+                <Text style={[styles.infoTitle, { color: c.text }]}>
+                  {formatEventDate(event.date)}
+                </Text>
+                {event.time && (
                   <Text
                     style={[styles.infoSubtitle, { color: c.textSecondary }]}
-                    numberOfLines={1}
                   >
-                    {event.venue.address && `${event.venue.address}, `}
-                    {event.venue.city}
-                    {event.venue.state && `, ${event.venue.state}`}
+                    {formatEventTime(event.time)}
                   </Text>
                 )}
               </View>
             </View>
-          )}
 
-          {/* Price Range */}
-          {event.priceRange && (
-            <View style={styles.infoRow}>
+            {/* Venue */}
+            {event.venue && (
               <View
                 style={[
-                  styles.iconBox,
+                  styles.infoCard,
                   { backgroundColor: c.backgroundSecondary },
                 ]}
               >
-                <Text style={styles.icon}>🎫</Text>
-              </View>
-              <View style={styles.infoText}>
-                <Text style={[styles.infoTitle, { color: c.text }]}>
-                  {formatPriceRange(
-                    event.priceRange.min,
-                    event.priceRange.max,
-                    event.priceRange.currency
+                <View
+                  style={[styles.iconCircle, { backgroundColor: "#fce7f3" }]}
+                >
+                  <Feather name="map-pin" size={20} color="#ec4899" />
+                </View>
+                <View style={styles.infoText}>
+                  <Text style={[styles.infoLabel, { color: c.textTertiary }]}>
+                    Location
+                  </Text>
+                  <Text style={[styles.infoTitle, { color: c.text }]}>
+                    {event.venue.name}
+                  </Text>
+                  {(event.venue.city || event.venue.address) && (
+                    <Text
+                      style={[styles.infoSubtitle, { color: c.textSecondary }]}
+                      numberOfLines={1}
+                    >
+                      {event.venue.address && `${event.venue.address}, `}
+                      {event.venue.city}
+                      {event.venue.state && `, ${event.venue.state}`}
+                    </Text>
                   )}
-                </Text>
-                <Text style={[styles.infoSubtitle, { color: c.textSecondary }]}>
-                  Price range
-                </Text>
+                </View>
               </View>
-            </View>
-          )}
+            )}
+
+            {/* Price Range */}
+            {event.priceRange && (
+              <View
+                style={[
+                  styles.infoCard,
+                  { backgroundColor: c.backgroundSecondary },
+                ]}
+              >
+                <View
+                  style={[styles.iconCircle, { backgroundColor: "#d1fae5" }]}
+                >
+                  <Feather name="tag" size={20} color="#10b981" />
+                </View>
+                <View style={styles.infoText}>
+                  <Text style={[styles.infoLabel, { color: c.textTertiary }]}>
+                    Price Range
+                  </Text>
+                  <Text style={[styles.infoTitle, { color: c.text }]}>
+                    {formatPriceRange(
+                      event.priceRange.min,
+                      event.priceRange.max,
+                      event.priceRange.currency
+                    )}
+                  </Text>
+                </View>
+              </View>
+            )}
+          </View>
 
           {/* Description */}
           {event.info && (
             <View style={styles.aboutSection}>
-              <Text style={[styles.aboutTitle, { color: c.text }]}>About</Text>
+              <View style={styles.aboutHeader}>
+                <Feather name="info" size={18} color={c.textTertiary} />
+                <Text style={[styles.aboutTitle, { color: c.text }]}>
+                  Event Details
+                </Text>
+              </View>
               <Text style={[styles.aboutText, { color: c.textSecondary }]}>
                 {event.info}
               </Text>
@@ -257,6 +339,7 @@ export default function EventDetailScreen() {
           ]}
           onPress={handleBuyTickets}
         >
+          <Feather name="shopping-bag" size={18} color={colors.white} />
           <Text style={styles.buyButtonText}>Get Tickets</Text>
         </Pressable>
       </View>
@@ -273,21 +356,45 @@ function BackButton({
   colors: ThemeColors;
   floating?: boolean;
 }) {
-  return (
-    <View
-      style={floating ? styles.backButtonFloating : styles.backButtonStatic}
-    >
+  const isDark = c.background === colors.dark.background;
+
+  if (floating) {
+    return (
       <Pressable
-        style={({ pressed }) => [
-          styles.backButton,
-          { backgroundColor: c.backButton },
-          pressed && styles.pressed,
-        ]}
+        style={({ pressed }) => [pressed && styles.pressed]}
         onPress={() => router.back()}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
-        <Text style={[styles.backIcon, { color: c.text }]}>←</Text>
+        <View
+          style={[
+            styles.backButtonCircle,
+            { backgroundColor: "rgba(0,0,0,0.3)" },
+          ]}
+        >
+          <Feather name="arrow-left" size={20} color="#fff" />
+        </View>
       </Pressable>
-    </View>
+    );
+  }
+
+  return (
+    <Pressable
+      style={({ pressed }) => [
+        styles.backButtonStatic,
+        pressed && styles.pressed,
+      ]}
+      onPress={() => router.back()}
+      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+    >
+      <View
+        style={[
+          styles.backButtonCircle,
+          { backgroundColor: c.backgroundSecondary },
+        ]}
+      >
+        <Feather name="arrow-left" size={20} color={isDark ? "#fff" : "#000"} />
+      </View>
+    </Pressable>
   );
 }
 
@@ -323,36 +430,51 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 16,
   },
-  genre: {
+  categoryBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(99, 102, 241, 0.1)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  categoryText: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: "700",
     color: colors.primary,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   title: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: "bold",
-    lineHeight: 32,
+    lineHeight: 34,
   },
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
+  infoCards: {
     gap: 12,
   },
-  iconBox: {
+  infoCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    borderRadius: 16,
+    gap: 14,
+  },
+  iconCircle: {
     width: 44,
     height: 44,
-    borderRadius: 12,
+    borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
-  },
-  icon: {
-    fontSize: 20,
   },
   infoText: {
     flex: 1,
     gap: 2,
+  },
+  infoLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   infoTitle: {
     fontSize: 16,
@@ -363,6 +485,11 @@ const styles = StyleSheet.create({
   },
   aboutSection: {
     marginTop: 8,
+    gap: 12,
+  },
+  aboutHeader: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   aboutTitle: {
@@ -371,7 +498,7 @@ const styles = StyleSheet.create({
   },
   aboutText: {
     fontSize: 15,
-    lineHeight: 22,
+    lineHeight: 24,
   },
   bottomSpacer: {
     height: 100,
@@ -388,36 +515,61 @@ const styles = StyleSheet.create({
   buyButton: {
     backgroundColor: colors.primary,
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   buyButtonPressed: {
-    opacity: 0.8,
+    opacity: 0.9,
+    transform: [{ scale: 0.98 }],
   },
   buyButtonText: {
     color: colors.white,
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
   },
-  backButtonFloating: {
+  floatingHeader: {
     position: "absolute",
-    top: 8,
-    left: 8,
-    zIndex: 10,
+    top: 16,
+    left: 16,
+    right: 16,
+    zIndex: 100,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
-  backButtonStatic: {
-    padding: 8,
+  headerActions: {
+    flexDirection: "row",
+    gap: 8,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  actionButton: {},
+  actionButtonCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(0,0,0,0.3)",
     justifyContent: "center",
     alignItems: "center",
   },
-  backIcon: {
-    fontSize: 20,
-    fontWeight: "600",
+  actionButtonFavorited: {
+    backgroundColor: "#ef4444",
+  },
+  backButtonStatic: {
+    padding: 16,
+  },
+  backButtonCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
   },
   pressed: {
     opacity: 0.7,

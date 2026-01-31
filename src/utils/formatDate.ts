@@ -6,7 +6,41 @@
  */
 export function formatEventDate(dateStr: string, timeStr?: string): string {
   const date = new Date(dateStr + (timeStr ? `T${timeStr}` : ""));
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const eventDay = new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate()
+  );
 
+  const diffDays = Math.floor(
+    (eventDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  // Today
+  if (diffDays === 0) {
+    return "Today";
+  }
+
+  // Tomorrow
+  if (diffDays === 1) {
+    return "Tomorrow";
+  }
+
+  // Within this week (2-6 days)
+  if (diffDays >= 2 && diffDays <= 6) {
+    const dayName = date.toLocaleDateString("en-US", { weekday: "short" });
+    return `This ${dayName}`;
+  }
+
+  // Next week
+  if (diffDays >= 7 && diffDays <= 13) {
+    const dayName = date.toLocaleDateString("en-US", { weekday: "short" });
+    return `Next ${dayName}`;
+  }
+
+  // Default format
   const options: Intl.DateTimeFormatOptions = {
     weekday: "short",
     month: "short",
@@ -54,4 +88,19 @@ export function formatPriceRange(
   }
 
   return `${formatter.format(min)} - ${formatter.format(max)}`;
+}
+
+/**
+ * Format a single price value
+ * @param price - Price value
+ * @param currency - Currency code (default: USD)
+ * @returns Formatted price string
+ */
+export function formatPrice(price: number, currency: string = "USD"): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(price);
 }

@@ -63,15 +63,37 @@ export interface FetchEventsParams {
   size?: number;
   keyword?: string;
   sort?: string;
+  segmentId?: string;
+  countryCode?: string;
+  startDateTime?: string;
+  endDateTime?: string;
 }
 
 export async function fetchEvents(
   params: FetchEventsParams = {}
 ): Promise<EventsPage> {
-  const { page = 0, size = 20, keyword, sort = "date,asc" } = params;
+  const {
+    page = 0,
+    size = 20,
+    keyword,
+    sort = "date,asc",
+    segmentId,
+    countryCode = "US",
+    startDateTime,
+    endDateTime,
+  } = params;
 
   const data = await api<TicketmasterEventsResponse>("/events.json", {
-    params: { page, size, keyword, sort },
+    params: {
+      page,
+      size,
+      keyword,
+      sort,
+      segmentId,
+      countryCode,
+      startDateTime,
+      endDateTime,
+    },
   });
 
   const events = data._embedded?.events || [];

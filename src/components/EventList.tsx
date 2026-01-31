@@ -8,6 +8,7 @@ import {
   StyleSheet,
   useColorScheme,
 } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { EventCard } from "./EventCard";
 import { EventListSkeleton } from "./Skeleton";
 import { ErrorView } from "./ErrorView";
@@ -75,12 +76,21 @@ export function EventList({
     if (isLoading) return null;
     return (
       <View style={styles.empty}>
-        <Text style={[styles.emptyText, { color: c.textSecondary }]}>
+        <Feather
+          name="calendar"
+          size={48}
+          color={c.textTertiary}
+          style={styles.emptyIcon}
+        />
+        <Text style={[styles.emptyTitle, { color: c.text }]}>
           No events found
+        </Text>
+        <Text style={[styles.emptyText, { color: c.textSecondary }]}>
+          Try adjusting your filters or search terms
         </Text>
       </View>
     );
-  }, [isLoading, c.textSecondary]);
+  }, [isLoading, c.text, c.textSecondary, c.textTertiary]);
 
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
@@ -137,8 +147,9 @@ const styles = StyleSheet.create({
     padding: 6,
   },
   listItem: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     paddingVertical: 6,
+    overflow: "hidden",
   },
   footer: {
     padding: 16,
@@ -148,9 +159,18 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 16,
+    padding: 32,
+  },
+  emptyIcon: {
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 17,
+    fontWeight: "600",
+    marginBottom: 8,
   },
   emptyText: {
     fontSize: 14,
+    textAlign: "center",
   },
 });

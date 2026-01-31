@@ -1,6 +1,6 @@
 export const colors = {
   light: {
-    background: "#fff",
+    background: "#f8fafc",
     backgroundSecondary: "#f1f5f9",
     card: "#fff",
     text: "#0f172a",
