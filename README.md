@@ -82,3 +82,30 @@ Tests are located in `src/__tests__/`. Run with:
 ```bash
 npm test
 ```
+
+## Build
+
+Using [EAS Build](https://docs.expo.dev/build/introduction/):
+
+```bash
+# Install EAS CLI
+npm install -g eas-cli
+
+# Login to Expo
+eas login
+
+# Set API key as secret
+eas secret:create --name EXPO_PUBLIC_TICKETMASTER_API_KEY --value "your_key"
+
+# Build for iOS
+eas build --platform ios --profile production
+
+# Build for Android
+eas build --platform android --profile production
+```
+
+Build profiles:
+
+- `development` - Development client with simulator support
+- `preview` - Internal testing (ad-hoc/APK)
+- `production` - App Store / Play Store release
