@@ -125,6 +125,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     lineHeight: 20,
+    height: 40, // 固定 2 行高度，保持卡片对齐
   },
   date: {
     fontSize: 13,
