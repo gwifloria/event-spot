@@ -109,3 +109,18 @@ Build profiles:
 - `development` - Development client with simulator support
 - `preview` - Internal testing (ad-hoc/APK)
 - `production` - App Store / Play Store release
+
+## Development Approach
+
+| Phase           | Focus         | Highlights                               |
+| --------------- | ------------- | ---------------------------------------- |
+| 1. Init         | Project setup | Expo + TypeScript, ESLint/Prettier/Husky |
+| 2. Architecture | Tech stack    | Expo Router, TanStack Query, Zustand     |
+| 3. Core         | Features      | Event list, detail page, search, filters |
+| 4. Polish       | UX & Quality  | Date picker interaction, unit tests      |
+| 5. Deploy       | Release       | EAS Build config, bug fixes              |
+
+**Key decisions:**
+
+- **TanStack Query + Zustand**: Server state (API cache) vs client state (favorites) separation
+- **Native RN components**: Removed Tamagui to reduce complexity for this scope
