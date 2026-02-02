@@ -3,11 +3,9 @@ import { create } from "zustand";
 import { persist, createJSONStorage, StateStorage } from "zustand/middleware";
 import type { DateFilter } from "../utils/dateFilter";
 
-export type ViewMode = "grid" | "list";
 export type SortOption = "date,asc" | "date,desc" | "name,asc";
 
 interface AppState {
-  viewMode: ViewMode;
   searchQuery: string;
   searchHistory: string[];
   selectedCategory: string;
@@ -15,8 +13,6 @@ interface AppState {
   selectedDateFilter: DateFilter;
   selectedSort: SortOption;
   favorites: string[];
-  setViewMode: (mode: ViewMode) => void;
-  toggleViewMode: () => void;
   setSearchQuery: (query: string) => void;
   addToSearchHistory: (query: string) => void;
   removeFromSearchHistory: (query: string) => void;
@@ -66,7 +62,6 @@ const getStorage = (): StateStorage => {
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
-      viewMode: "grid",
       searchQuery: "",
       searchHistory: [],
       selectedCategory: "all",
@@ -74,11 +69,6 @@ export const useAppStore = create<AppState>()(
       selectedDateFilter: "all",
       selectedSort: "date,asc",
       favorites: [],
-      setViewMode: (mode) => set({ viewMode: mode }),
-      toggleViewMode: () =>
-        set((state) => ({
-          viewMode: state.viewMode === "grid" ? "list" : "grid",
-        })),
       setSearchQuery: (query) => set({ searchQuery: query }),
       addToSearchHistory: (query) =>
         set((state) => {
@@ -113,7 +103,6 @@ export const useAppStore = create<AppState>()(
       name: "event-spot-storage",
       storage: createJSONStorage(getStorage),
       partialize: (state) => ({
-        viewMode: state.viewMode,
         searchHistory: state.searchHistory,
         selectedRegion: state.selectedRegion,
         favorites: state.favorites,

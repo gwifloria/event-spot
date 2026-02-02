@@ -19,20 +19,18 @@ import {
   RegionModal,
   SortModal,
   CATEGORIES,
-} from "../src/components";
-import type { Category } from "../src/components";
-import { useEvents, useDebouncedValue, useFilters } from "../src/hooks";
-import { useAppStore } from "../src/stores/appStore";
-import { getColors } from "../src/constants/colors";
-import { formatResultCount } from "../src/utils/format";
+} from "../../src/components";
+import type { Category } from "../../src/components";
+import { useEvents, useDebouncedValue, useFilters } from "../../src/hooks";
+import { useAppStore } from "../../src/stores/appStore";
+import { getColors } from "../../src/constants/colors";
+import { formatResultCount } from "../../src/utils/format";
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const c = getColors(colorScheme === "dark" ? "dark" : "light");
 
   const {
-    viewMode,
-    toggleViewMode,
     searchQuery,
     setSearchQuery,
     searchHistory,
@@ -162,20 +160,6 @@ export default function HomeScreen() {
     >
       <View style={styles.header}>
         <Text style={[styles.title, { color: c.text }]}>Event Spot</Text>
-        <Pressable
-          onPress={toggleViewMode}
-          style={({ pressed }) => [
-            styles.iconButton,
-            { backgroundColor: c.backgroundSecondary },
-            pressed && styles.pressed,
-          ]}
-        >
-          <Feather
-            name={viewMode === "grid" ? "list" : "grid"}
-            size={20}
-            color={c.text}
-          />
-        </Pressable>
       </View>
 
       <View style={styles.searchRow}>
@@ -228,7 +212,6 @@ export default function HomeScreen() {
 
       <EventList
         events={events}
-        viewMode={viewMode}
         isLoading={isLoading}
         isError={isError}
         error={error}
@@ -277,13 +260,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "bold",
-  },
-  iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
   },
   pressed: {
     opacity: 0.7,

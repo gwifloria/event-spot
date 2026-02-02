@@ -47,6 +47,48 @@ export function isCustomDateFilter(
   return typeof filter === "object" && filter.type === "custom";
 }
 
+/**
+ * 获取预设对应的日期字符串（YYYY-MM-DD 格式）
+ */
+export function getPresetDateStrings(
+  preset: DateFilterPreset
+): { start: string; end: string } | null {
+  if (preset === "all") return null;
+
+  const today = new Date();
+  const formatDate = (d: Date) => d.toISOString().split("T")[0];
+
+  switch (preset) {
+    case "today":
+      return { start: formatDate(today), end: formatDate(today) };
+
+    case "weekend": {
+      const day = today.getDay();
+      const saturday = new Date(today);
+      saturday.setDate(today.getDate() + ((6 - day + 7) % 7));
+      const sunday = new Date(saturday);
+      sunday.setDate(saturday.getDate() + 1);
+      // 如果今天是周末，从今天开始
+      const start = day === 0 || day === 6 ? today : saturday;
+      return { start: formatDate(start), end: formatDate(sunday) };
+    }
+
+    case "week": {
+      const endOfWeek = new Date(today);
+      endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
+      return { start: formatDate(today), end: formatDate(endOfWeek) };
+    }
+
+    case "month": {
+      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      return { start: formatDate(today), end: formatDate(endOfMonth) };
+    }
+
+    default:
+      return null;
+  }
+}
+
 interface DateRange {
   startDateTime?: string;
   endDateTime?: string;

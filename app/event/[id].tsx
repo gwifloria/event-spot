@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -15,16 +15,19 @@ import {
   Share,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Feather } from "@expo/vector-icons";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { useEventDetail } from "../../src/hooks";
-import { ErrorView } from "../../src/components";
+import { ErrorView, Toast } from "../../src/components";
 import { colors, getColors } from "../../src/constants/colors";
 import {
   formatEventDate,
   formatEventTime,
   formatPriceRange,
-} from "../../src/utils/formatDate";
+} from "../../src/utils/format";
 import { useAppStore } from "../../src/stores/appStore";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -32,6 +35,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 export default function EventDetailScreen() {
   const colorScheme = useColorScheme();
   const c = getColors(colorScheme === "dark" ? "dark" : "light");
+  const insets = useSafeAreaInsets();
 
   const { id } = useLocalSearchParams<{ id: string }>();
   const {
@@ -46,6 +50,10 @@ export default function EventDetailScreen() {
   const isFavorite = id ? favorites.includes(id) : false;
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [toast, setToast] = useState<{
+    visible: boolean;
+    message: string;
+  }>({ visible: false, message: "" });
 
   const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
@@ -60,9 +68,20 @@ export default function EventDetailScreen() {
 
   const handleToggleFavorite = () => {
     if (id) {
+      const wasInFavorites = favorites.includes(id);
       toggleFavorite(id);
+      setToast({
+        visible: true,
+        message: wasInFavorites
+          ? "Removed from favorites"
+          : "Added to favorites",
+      });
     }
   };
+
+  const hideToast = useCallback(() => {
+    setToast((prev) => ({ ...prev, visible: false }));
+  }, []);
 
   const handleShare = async () => {
     if (!event) return;
@@ -119,7 +138,7 @@ export default function EventDetailScreen() {
       style={[styles.container, { backgroundColor: c.background }]}
       edges={["top"]}
     >
-      <View style={styles.floatingHeader}>
+      <View style={[styles.floatingHeader, { top: insets.top + 16 }]}>
         <BackButton colors={c} floating />
         <View style={styles.headerActions}>
           <Pressable
@@ -135,10 +154,10 @@ export default function EventDetailScreen() {
                 isFavorite && styles.actionButtonFavorited,
               ]}
             >
-              <Feather
-                name="heart"
-                size={20}
-                color={isFavorite ? "#fff" : "#fff"}
+              <Ionicons
+                name={isFavorite ? "heart" : "heart-outline"}
+                size={22}
+                color="#fff"
               />
             </View>
           </Pressable>
@@ -343,6 +362,14 @@ export default function EventDetailScreen() {
           <Text style={styles.buyButtonText}>Get Tickets</Text>
         </Pressable>
       </View>
+
+      {/* Toast */}
+      <Toast
+        visible={toast.visible}
+        message={toast.message}
+        type="success"
+        onHide={hideToast}
+      />
     </SafeAreaView>
   );
 }
@@ -537,7 +564,7 @@ const styles = StyleSheet.create({
   },
   floatingHeader: {
     position: "absolute",
-    top: 16,
+    top: 0,
     left: 16,
     right: 16,
     zIndex: 100,

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   useColorScheme,
   ScrollView,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Calendar, DateData } from "react-native-calendars";
 import { Feather } from "@expo/vector-icons";
 import { colors, getColors } from "../constants/colors";
@@ -17,6 +18,7 @@ import {
   type DateFilterPreset,
   type CustomDateRange,
   isCustomDateFilter,
+  getPresetDateStrings,
 } from "../utils/dateFilter";
 
 interface DateFilterModalProps {
@@ -36,6 +38,11 @@ type MarkedDates = {
   };
 };
 
+function formatDisplayDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 export function DateFilterModal({
   visible,
   onClose,
@@ -45,35 +52,75 @@ export function DateFilterModal({
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const c = getColors(isDark ? "dark" : "light");
+  const insets = useSafeAreaInsets();
 
-  const [showCustom, setShowCustom] = useState(
-    isCustomDateFilter(selectedFilter)
-  );
-  const [customStart, setCustomStart] = useState<string | null>(
-    isCustomDateFilter(selectedFilter) ? selectedFilter.startDate : null
-  );
-  const [customEnd, setCustomEnd] = useState<string | null>(
-    isCustomDateFilter(selectedFilter) ? selectedFilter.endDate : null
-  );
-
-  const handlePresetSelect = (preset: DateFilterPreset) => {
-    onSelectFilter(preset);
-    onClose();
+  // 计算初始状态
+  const getInitialState = () => {
+    if (isCustomDateFilter(selectedFilter)) {
+      return {
+        preset: null as DateFilterPreset | null,
+        start: selectedFilter.startDate,
+        end: selectedFilter.endDate,
+      };
+    }
+    if (selectedFilter === "all") {
+      return { preset: selectedFilter, start: null, end: null };
+    }
+    const range = getPresetDateStrings(selectedFilter);
+    return {
+      preset: selectedFilter,
+      start: range?.start ?? null,
+      end: range?.end ?? null,
+    };
   };
 
-  const handleCustomToggle = () => {
-    setShowCustom(!showCustom);
-    if (!showCustom) {
+  // 当前选中的预设（用户在日历上修改日期后清空）
+  const [activePreset, setActivePreset] = useState<DateFilterPreset | null>(
+    () => getInitialState().preset
+  );
+  // 日历上显示的日期范围
+  const [customStart, setCustomStart] = useState<string | null>(
+    () => getInitialState().start
+  );
+  const [customEnd, setCustomEnd] = useState<string | null>(
+    () => getInitialState().end
+  );
+
+  // Modal 打开时重置状态
+  useEffect(() => {
+    if (visible) {
+      const initial = getInitialState();
+      setActivePreset(initial.preset);
+      setCustomStart(initial.start);
+      setCustomEnd(initial.end);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
+  const handlePresetSelect = (preset: DateFilterPreset) => {
+    setActivePreset(preset);
+    if (preset === "all") {
       setCustomStart(null);
       setCustomEnd(null);
+    } else {
+      const range = getPresetDateStrings(preset);
+      if (range) {
+        setCustomStart(range.start);
+        setCustomEnd(range.end);
+      }
     }
   };
 
   const handleDayPress = (day: DateData) => {
+    // 用户点击日历，清空预设选择
+    setActivePreset(null);
+
     if (!customStart || (customStart && customEnd)) {
+      // 开始新的选择
       setCustomStart(day.dateString);
       setCustomEnd(null);
     } else {
+      // 选择结束日期
       if (day.dateString < customStart) {
         setCustomEnd(customStart);
         setCustomStart(day.dateString);
@@ -84,21 +131,25 @@ export function DateFilterModal({
   };
 
   const handleApply = () => {
-    if (customStart && customEnd) {
+    if (activePreset !== null) {
+      // 预设选中且未修改
+      onSelectFilter(activePreset);
+    } else if (customStart && customEnd) {
+      // 自定义日期范围
       const customRange: CustomDateRange = {
         type: "custom",
         startDate: customStart,
         endDate: customEnd,
       };
       onSelectFilter(customRange);
-      onClose();
     }
+    onClose();
   };
 
   const handleClear = () => {
+    setActivePreset("all");
     setCustomStart(null);
     setCustomEnd(null);
-    setShowCustom(false);
     onSelectFilter("all");
     onClose();
   };
@@ -141,10 +192,6 @@ export function DateFilterModal({
     return marked;
   }, [customStart, customEnd]);
 
-  const isPresetSelected = (preset: DateFilterPreset) => {
-    return !isCustomDateFilter(selectedFilter) && selectedFilter === preset;
-  };
-
   const today = new Date().toISOString().split("T")[0];
 
   const calendarTheme = {
@@ -163,6 +210,9 @@ export function DateFilterModal({
     textDayHeaderFontWeight: "500" as const,
   };
 
+  // Apply 按钮是否可用
+  const canApply = activePreset !== null || (customStart && customEnd);
+
   return (
     <Modal
       visible={visible}
@@ -175,7 +225,7 @@ export function DateFilterModal({
           style={[styles.sheet, { backgroundColor: c.background }]}
           onPress={(e) => e.stopPropagation()}
         >
-          <View style={styles.header}>
+          <View style={[styles.header, { borderBottomColor: c.border }]}>
             <Text style={[styles.title, { color: c.text }]}>Select Date</Text>
             <Pressable onPress={onClose} style={styles.closeButton}>
               <Feather name="x" size={24} color={c.text} />
@@ -187,7 +237,7 @@ export function DateFilterModal({
             showsVerticalScrollIndicator={false}
           >
             {DATE_FILTERS.map((filter) => {
-              const isSelected = isPresetSelected(filter.id);
+              const isSelected = activePreset === filter.id;
               return (
                 <Pressable
                   key={filter.id}
@@ -220,54 +270,35 @@ export function DateFilterModal({
 
             <View style={[styles.divider, { backgroundColor: c.border }]} />
 
-            <Pressable
-              style={[
-                styles.optionItem,
-                {
-                  backgroundColor:
-                    showCustom || isCustomDateFilter(selectedFilter)
-                      ? c.backgroundSecondary
-                      : "transparent",
-                },
-              ]}
-              onPress={handleCustomToggle}
-            >
-              <View style={styles.radio}>
-                {(showCustom || isCustomDateFilter(selectedFilter)) && (
-                  <View
-                    style={[
-                      styles.radioInner,
-                      { backgroundColor: colors.primary },
-                    ]}
-                  />
-                )}
-              </View>
-              <Text style={[styles.optionLabel, { color: c.text }]}>
-                Custom Range
-              </Text>
-            </Pressable>
-
-            {showCustom && (
-              <View style={styles.calendarContainer}>
-                <Calendar
-                  onDayPress={handleDayPress}
-                  markedDates={markedDates}
-                  markingType="period"
-                  minDate={today}
-                  theme={calendarTheme}
-                  style={[styles.calendar, { borderColor: c.border }]}
-                />
-                {customStart && (
-                  <Text style={[styles.rangeText, { color: c.textSecondary }]}>
-                    {customStart}
-                    {customEnd ? ` → ${customEnd}` : " → Select end date"}
-                  </Text>
-                )}
-              </View>
-            )}
+            <View style={styles.calendarContainer}>
+              <Calendar
+                onDayPress={handleDayPress}
+                markedDates={markedDates}
+                markingType="period"
+                minDate={today}
+                theme={calendarTheme}
+                style={[styles.calendar, { borderColor: c.border }]}
+              />
+              {customStart && (
+                <Text style={[styles.rangeText, { color: c.textSecondary }]}>
+                  Selected: {formatDisplayDate(customStart)}
+                  {customEnd
+                    ? ` → ${formatDisplayDate(customEnd)}`
+                    : " → Select end date"}
+                </Text>
+              )}
+            </View>
           </ScrollView>
 
-          <View style={[styles.footer, { borderTopColor: c.border }]}>
+          <View
+            style={[
+              styles.footer,
+              {
+                borderTopColor: c.border,
+                paddingBottom: Math.max(insets.bottom, 16),
+              },
+            ]}
+          >
             <Pressable
               style={[styles.footerButton, styles.clearButton]}
               onPress={handleClear}
@@ -283,12 +314,10 @@ export function DateFilterModal({
                 styles.footerButton,
                 styles.applyButton,
                 { backgroundColor: colors.primary },
-                (!customStart || !customEnd) &&
-                  !showCustom &&
-                  styles.buttonDisabled,
+                !canApply && styles.buttonDisabled,
               ]}
               onPress={handleApply}
-              disabled={showCustom && (!customStart || !customEnd)}
+              disabled={!canApply}
             >
               <Text style={styles.applyButtonText}>Apply</Text>
             </Pressable>
@@ -317,7 +346,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.06)",
   },
   title: {
     fontSize: 18,
@@ -381,9 +409,11 @@ const styles = StyleSheet.create({
   },
   footerButton: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 16,
+    minHeight: 52,
     borderRadius: 12,
     alignItems: "center",
+    justifyContent: "center",
   },
   clearButton: {
     backgroundColor: "transparent",
